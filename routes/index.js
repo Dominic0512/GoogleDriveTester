@@ -41,22 +41,20 @@ function listFiles (auth, callback) {
       throw err;
     }
     const files = res.data.files;
-    console.log(files);
     callback(files);
-    // if (files.length === 0) {
-    //   console.log('No files found.');
-    // } else {
-    //   console.log('Files:');
-    //   for (const file of files) {
-    //     console.log(`${file.name} (${file.id})`);
-    //   }
-    // }
   });
 };
 
 router.get('/', function(req, res, next) {
-  console.log(client);  
-  console.log(authorizeUrl);  
+  const credentials = req.cookies.GOOGLE_CREDENTIALS;
+  if (!credentials) {
+    res.redirect('/get-token');
+  }
+  
+  res.render('index');
+});
+
+router.get('/get-token', function(req, res, next) {
   res.render('getToken', { authUrl: authorizeUrl });
 });
 
@@ -64,14 +62,20 @@ router.get('/oauth2callback', function(req, res, next) {
   const code = req.query.code;
   client.getToken(code, (err, tokens) => {
     if (err) {
-     console.error('Error getting oAuth tokens:');
-     throw err;
+      console.log('<<<< ERROR >>>>');
+      res.redirect('/get-token');
     }
     client.credentials = tokens;
-    listFiles(client, function(files) {
-        console.log(typeof files);
-        res.json(files);
-    });
+    res.cookie('GOOGLE_CREDENTIALS', tokens);
+    res.redirect('/');
+  });
+  
+});
+
+router.get('/list', function(req, res, next) {
+  client.credentials = req.cookies.GOOGLE_CREDENTIALS;
+  listFiles(client, function(files) {
+      res.json(files);
   });
 });
 
